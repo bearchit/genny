@@ -171,12 +171,16 @@ func generateSpecific(filename string, in io.ReadSeeker, typeSet map[string]Targ
 
 // Generics parses the source file and generates the bytes replacing the
 // generic types for the keys map with the specific types (its value).
-func Generics(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typeSets []map[string]Target) ([]byte, error) {
+func Generics(filename, outputFilename, pkgName, tag, prefix string, in io.ReadSeeker, typeSets []map[string]Target) ([]byte, error) {
 	var localUnwantedLinePrefixes [][]byte
 	localUnwantedLinePrefixes = append(localUnwantedLinePrefixes, unwantedLinePrefixes...)
 
 	if tag != "" {
 		localUnwantedLinePrefixes = append(localUnwantedLinePrefixes, []byte(fmt.Sprintf("// +build %s", tag)))
+	}
+
+	if prefix != "" {
+		localUnwantedLinePrefixes = append(localUnwantedLinePrefixes, []byte(fmt.Sprintf("//go:generate %s", prefix)))
 	}
 
 	totalOutput := header

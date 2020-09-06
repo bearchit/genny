@@ -33,11 +33,12 @@ const (
 
 func main() {
 	var (
-		in      = flag.String("in", "", "file to parse instead of stdin")
-		out     = flag.String("out", "", "file to save output to instead of stdout")
-		pkgName = flag.String("pkg", "", "package name for generated files")
-		genTag  = flag.String("tag", "", "build tag that is stripped from output")
-		prefix  = "https://github.com/metabition/gennylib/raw/master/"
+		in        = flag.String("in", "", "file to parse instead of stdin")
+		out       = flag.String("out", "", "file to save output to instead of stdout")
+		pkgName   = flag.String("pkg", "", "package name for generated files")
+		genTag    = flag.String("tag", "", "build tag that is stripped from output")
+		genPrefix = flag.String("prefix", "", "go generate prefix that is stripped from output")
+		prefix    = "https://github.com/metabition/gennylib/raw/master/"
 	)
 	flag.Parse()
 	args := flag.Args()
@@ -84,7 +85,7 @@ func main() {
 		}
 		r.Body.Close()
 		br := bytes.NewReader(b)
-		err = gen(*in, outputFilename, *pkgName, *genTag, br, typeSets, outWriter)
+		err = gen(*in, outputFilename, *pkgName, *genTag, *genPrefix, br, typeSets, outWriter)
 	} else if len(*in) > 0 {
 		var file *os.File
 		file, err = os.Open(*in)
@@ -92,7 +93,7 @@ func main() {
 			fatal(exitcodeSourceFileInvalid, err)
 		}
 		defer file.Close()
-		err = gen(*in, outputFilename, *pkgName, *genTag, file, typeSets, outWriter)
+		err = gen(*in, outputFilename, *pkgName, *genTag, *genPrefix, file, typeSets, outWriter)
 	} else {
 		var source []byte
 		source, err = ioutil.ReadAll(os.Stdin)
@@ -100,7 +101,7 @@ func main() {
 			fatal(exitcodeStdinFailed, err)
 		}
 		reader := bytes.NewReader(source)
-		err = gen("stdin", outputFilename, *pkgName, *genTag, reader, typeSets, outWriter)
+		err = gen("stdin", outputFilename, *pkgName, *genTag, *genPrefix, reader, typeSets, outWriter)
 	}
 
 	// do the work
@@ -144,12 +145,12 @@ func fatal(code int, a ...interface{}) {
 }
 
 // gen performs the generic generation.
-func gen(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typesets []map[string]parse.Target, out io.Writer) error {
+func gen(filename, outputFilename, pkgName, tag, prefix string, in io.ReadSeeker, typesets []map[string]parse.Target, out io.Writer) error {
 
 	var output []byte
 	var err error
 
-	output, err = parse.Generics(filename, outputFilename, pkgName, tag, in, typesets)
+	output, err = parse.Generics(filename, outputFilename, pkgName, tag, prefix, in, typesets)
 	if err != nil {
 		return err
 	}
