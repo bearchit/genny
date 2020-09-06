@@ -144,7 +144,7 @@ func fatal(code int, a ...interface{}) {
 }
 
 // gen performs the generic generation.
-func gen(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typesets []map[string]string, out io.Writer) error {
+func gen(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typesets []map[string]parse.Target, out io.Writer) error {
 
 	var output []byte
 	var err error

@@ -1,6 +1,9 @@
 package parse
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 const (
 	typeSep     = " "
@@ -9,6 +12,13 @@ const (
 	builtins    = "BUILTINS"
 	numbers     = "NUMBERS"
 )
+
+type Target struct {
+	Prefix string
+	Name   string
+}
+
+var pattern = regexp.MustCompile(`([^.]+$)`)
 
 // TypeSet turns a type string into a []map[string]string
 // that can be given to parse.Generics for it to do its magic.
@@ -20,9 +30,8 @@ const (
 //     Person=man Animal=dog Animal2=cat
 //     Person=man,woman Animal=dog,cat
 //     Person=man,woman,child Animal=dog,cat Place=london,paris
-func TypeSet(arg string) ([]map[string]string, error) {
-
-	types := make(map[string][]string)
+func TypeSet(arg string) ([]map[string]Target, error) {
+	types := make(map[string][]Target)
 	var keys []string
 	for _, pair := range strings.Split(arg, typeSep) {
 		segs := strings.Split(pair, keyValueSep)
@@ -31,14 +40,19 @@ func TypeSet(arg string) ([]map[string]string, error) {
 		}
 		key := segs[0]
 		keys = append(keys, key)
-		types[key] = make([]string, 0)
+		types[key] = make([]Target, 0)
 		for _, t := range strings.Split(segs[1], valuesSep) {
+			matched := pattern.FindString(t)
+
 			if t == builtins {
-				types[key] = append(types[key], Builtins...)
+				//types[key] = append(types[key], Builtins...)
 			} else if t == numbers {
-				types[key] = append(types[key], Numbers...)
+				//types[key] = append(types[key], Numbers...)
 			} else {
-				types[key] = append(types[key], t)
+				types[key] = append(types[key], Target{
+					Prefix: t,
+					Name:   matched,
+				})
 			}
 		}
 	}
@@ -48,13 +62,13 @@ func TypeSet(arg string) ([]map[string]string, error) {
 		cursors[key] = 0
 	}
 
-	outChan := make(chan map[string]string)
+	outChan := make(chan map[string]Target)
 	go func() {
 		buildTypeSet(keys, 0, cursors, types, outChan)
 		close(outChan)
 	}()
 
-	var typeSets []map[string]string
+	var typeSets []map[string]Target
 	for typeSet := range outChan {
 		typeSets = append(typeSets, typeSet)
 	}
@@ -63,14 +77,14 @@ func TypeSet(arg string) ([]map[string]string, error) {
 
 }
 
-func buildTypeSet(keys []string, keyI int, cursors map[string]int, types map[string][]string, out chan<- map[string]string) {
+func buildTypeSet(keys []string, keyI int, cursors map[string]int, types map[string][]Target, out chan<- map[string]Target) {
 	key := keys[keyI]
 	for cursors[key] < len(types[key]) {
 		if keyI < len(keys)-1 {
 			buildTypeSet(keys, keyI+1, copycursors(cursors), types, out)
 		} else {
 			// build the typeset for this combination
-			ts := make(map[string]string)
+			ts := make(map[string]Target)
 			for k, vals := range types {
 				ts[k] = vals[cursors[k]]
 			}

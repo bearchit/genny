@@ -38,15 +38,15 @@ var unwantedLinePrefixes = [][]byte{
 	[]byte("//go:generate genny "),
 }
 
-func subIntoLiteral(lit, typeTemplate, specificType string) string {
+func subIntoLiteral(lit, typeTemplate string, specificType Target) string {
 	if lit == typeTemplate {
-		return specificType
+		return specificType.Prefix
 	}
 	if !strings.Contains(lit, typeTemplate) {
 		return lit
 	}
-	specificLg := wordify(specificType, true)
-	specificSm := wordify(specificType, false)
+	specificLg := wordify(specificType.Name, true)
+	specificSm := wordify(specificType.Name, false)
 	result := strings.Replace(lit, typeTemplate, specificLg, -1)
 	if strings.HasPrefix(result, specificLg) && !isExported(lit) {
 		return strings.Replace(result, specificLg, specificSm, 1)
@@ -54,7 +54,7 @@ func subIntoLiteral(lit, typeTemplate, specificType string) string {
 	return result
 }
 
-func subTypeIntoComment(line, typeTemplate, specificType string) string {
+func subTypeIntoComment(line, typeTemplate string, specificType Target) string {
 	var subbed string
 	for _, w := range strings.Fields(line) {
 		subbed = subbed + subIntoLiteral(w, typeTemplate, specificType) + " "
@@ -64,7 +64,7 @@ func subTypeIntoComment(line, typeTemplate, specificType string) string {
 
 // Does the heavy lifting of taking a line of our code and
 // sbustituting a type into there for our generic type
-func subTypeIntoLine(line, typeTemplate, specificType string) string {
+func subTypeIntoLine(line, typeTemplate string, target Target) string {
 	src := []byte(line)
 	var s scanner.Scanner
 	fset := token.NewFileSet()
@@ -76,10 +76,10 @@ func subTypeIntoLine(line, typeTemplate, specificType string) string {
 		if tok == token.EOF {
 			break
 		} else if tok == token.COMMENT {
-			subbed := subTypeIntoComment(lit, typeTemplate, specificType)
+			subbed := subTypeIntoComment(lit, typeTemplate, target)
 			output = output + subbed + " "
 		} else if tok.IsLiteral() {
-			subbed := subIntoLiteral(lit, typeTemplate, specificType)
+			subbed := subIntoLiteral(lit, typeTemplate, target)
 			output = output + subbed + " "
 		} else {
 			output = output + tok.String() + " "
@@ -89,7 +89,7 @@ func subTypeIntoLine(line, typeTemplate, specificType string) string {
 }
 
 // typeSet looks like "KeyType: int, ValueType: string"
-func generateSpecific(filename string, in io.ReadSeeker, typeSet map[string]string) ([]byte, error) {
+func generateSpecific(filename string, in io.ReadSeeker, typeSet map[string]Target) ([]byte, error) {
 
 	// ensure we are at the beginning of the file
 	in.Seek(0, os.SEEK_SET)
@@ -171,7 +171,7 @@ func generateSpecific(filename string, in io.ReadSeeker, typeSet map[string]stri
 
 // Generics parses the source file and generates the bytes replacing the
 // generic types for the keys map with the specific types (its value).
-func Generics(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typeSets []map[string]string) ([]byte, error) {
+func Generics(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typeSets []map[string]Target) ([]byte, error) {
 	var localUnwantedLinePrefixes [][]byte
 	localUnwantedLinePrefixes = append(localUnwantedLinePrefixes, unwantedLinePrefixes...)
 
