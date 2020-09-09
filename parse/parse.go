@@ -36,6 +36,8 @@ var (
 )
 var unwantedLinePrefixes = [][]byte{
 	[]byte("//go:generate genny "),
+	[]byte("//go:generate go run github.com/cheekybits/genny"),
+	[]byte("//go:generate go run github.com/bearchit/genny"),
 }
 
 func subIntoLiteral(lit, typeTemplate string, specificType Target) string {
